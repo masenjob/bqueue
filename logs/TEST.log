@@ -1,0 +1,9 @@
+2020-08-17_16:16:26 INFO: Using internal input dir
+2020-08-17_16:28:09 INFO: Using internal input dir
+2020-08-17_16:28:26 INFO: Using internal input dir
+2020-08-17_16:28:26 INFO: Starting TEST queue
+2020-08-17_16:29:51 INFO: Using internal input dir
+2020-08-17_16:29:51 INFO: Starting TEST queue
+2020-08-17_16:29:51 INFO: Starting main loop
+2020-08-17_16:29:51 INFO: QUEUE TEST, threads 4, deliver batch 10, retries 2, pooling interval 1 sec
+2020-08-17_16:29:51 INFO: Using worker script: ./workers/cmove.sh

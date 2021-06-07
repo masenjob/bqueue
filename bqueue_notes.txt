@@ -1,0 +1,80 @@
+Bash queue processing
+
+Design goals:
+- Implement queue management of jobs (which will be certaing processing done on a file
+- jobs will be placed on a queue , that the script must read to get jobs to process
+- a retry queue must hold jobs that failed to be retried a predefined number of times
+- a failed queue must hold the failed jobs that were retried
+- new jobs can be placed at the "new" queue any time, while the script is running
+
+Design:
+
+queue jobs will be stored as files in directories.
+
+Queue directories:
+
+new - > all the jobs to be processed are stored here
+deliver -> to store a batch of jobs to be processed 
+process -> all the jobs being concurrently processed will be stored here.
+done -> to store successfully processed jobs
+failed -> to store failed jobs
+
+Initially , there will be a number of "new" jobs, and all other queues will be empty. At start, the first "n" jobs in "new" are moved to "deliver".  From the "deliver" queue,  the script will check the number of jobs in the "process" queue, and if it's lower than the threads value, will take as much jobs as threads available, and place it in the "process" queue , running them in the background.
+
+To do work on the job file, a "worker" script will be called. This will be a custom script that's going to do the actual work needed on the information carried by the job file. The worker scrupt is specified in the .conf file , and must have the following interfaces defined:
+    Input: it must take the contents of the job file as argument (if the contents has more that one string, separated by spaces, the script must handle the rest of the arguments) 
+    Output: Exit status must be 0 if the work performed was successful, any other value otherwise.
+    
+changes:
+V 1.1
+    - initialization routine to automatically create the directory structure if not present (maybe a mkdir -p to every queue subdir)
+    - give the config file as an argument, and create a whole directory structure based on it, to allow the script run a different queue for each config file specified. This will require a "name" parameter in the config file, which could be used to name the subirectory to create the queue dirs.
+    log 
+    - logging to a file & write script process PID  
+
+v2.0:
+
+	- moved functions to a separate file , so all scripts can source it ("queue_utils.sh")
+	- config parameter to allow a queue out feed the in on another queue
+	- new "monitor.sh" script to check the real time status of the queues
+	
+v2.1:
+	- implemment a lock to move files from the in queue (to allow an in queue to be shared among queues, which will allow some form of "clustering" if the bqueue directory is shared
+	- log file and pid file separation (via adding "hostname" to the name) , so the bqueue directory can be shared among different machines running the same scripts on the same queues.
+	
+
+
+NOTES for java applications:
+
+to improve startup times:
+- install latest Oracle JVM instead of OpenJDK
+- enable CDS for java apps:
+	run java -Xshare:dump
+	for dcm4che utilities: run them with JAVA_OPTS="-Xshare:on" <dcmutility>
+	install nailgun 
+
+
+ nailgun could be required. this requires mave
+
+
+
+TESTING:
+Generate 100 files, named with its datetime in nanoseconds, and write a number between 1 and 3 on each one
+
+for (( i = 0 ; i < 100 ; i++ )); do echo $(shuf -i 1-3 -n 1)>new/$(date +%d%m%Y%M%S%N); done
+
+
+
+
+        
+test ()
+{
+echo test
+# Aquire a lock for the dir
+exec 200>$proc_dir".lock"
+flock -n 200 || exit 1
+echo start
+sleep 10
+echo done
+}
+    
