@@ -5,20 +5,29 @@
 # study can be specified by accession number or study uid
 # Requires dcm4che version 5
 # 2020 Mauricio Asenjo
-# version 1.2
+# version 1.3
 
-#### CONFIGURATION ####
-#AE of the local movescu (source pacs must be configured to accept assoc from this AE)
-calling_ae=TEST_DICOM
-# Source PACS (where we will cmove from)
-source_ae=IMPAXUCSC
-source_ip=192.168.105.11
-source_port=104
-#Destination PACS (where we will cmove to)
-dest_ae=TEST_DICOM
-# Query by (Accession number: "ACC" , Study UID: "SUID")
-query="ACC"
-### END OF CONFIGURATION ###
+# Get the script directory
+dir=$(dirname ${BASH_SOURCE[0]})
+
+# Config file (relative to script location)
+config=$dir"/"$(basename $0)".conf"
+
+if [ -f $config ]
+then
+	source $config
+else
+	echo "ERROR: Config file "$config" not found."
+	echo "Make sure the config file exists and has this format:"
+	echo "calling_ae=<AET of this script>"
+	echo "source_ae=<AET of the source pacs>"
+	echo "source_ip=<ip of the soruce pacs>"
+	echo "source_port=<port of the soruce pacs"
+	echo "dest_ae=<AET of the destination pacs>"
+	echo "query=<Query by (Accession number: ACC or Study UID: SUID)>"
+	echo "timeout=<time to wait for cmove to complete before aborting>"
+	exit 1
+fi
 
 if [ -z $1 ]
 then
@@ -61,7 +70,7 @@ exec 6>&1
 command="$movescu -b $calling_ae -c $source_ae@$source_ip:$source_port $queryby$study --dest $dest_ae"
 echo "INFO: About to execute $command"
 
-result=$($command | tee >(cat - >&6) | grep -v remaining | grep C-MOVE-RSP)
+result=$(timeout $timeout $command | tee >(cat - >&6) | grep -v remaining | grep C-MOVE-RSP)
 exit_status=$?
 
 if [ $exit_status -ne 0 ]

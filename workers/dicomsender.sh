@@ -2,29 +2,43 @@
 #
 # dicomsender.sh
 # sends a study specified by command line
-# to the pacs referencied in this script
+# to the pacs referenced in the config file
 # Source study path is composed of the
 # $sourcedir variable / command line parameter
 # Requires dcm4che version 5 in the path
 #
 # 2020 Mauricio Asenjo
-# version 1.0
+# version 1.1
 
+# Get the script directory
+dir=$(dirname ${BASH_SOURCE[0]})
 
-#### CONFIGURATION ####
+# Config file (relative to script location)
+config=$dir"/"$(basename $0)".conf"
 
-#AE of the local store scu (destination pacs must be configured to accept assoc from this AE)
-calling_ae=TEST_DICOM
-# Destination PACS (where we will cmove to)
-dest_ae=WFMGR
-dest_host=192.168.160.132
-dest_port=9104
-#Destination PACS (where we will cmove to)
-dest_ae=TEST_DICOM
-# Directory where studies are stored
-source_dir="/cache/transformed"
+if [ -f $config ]
+then
+	source $config
+else
+	echo "ERROR: Config file "$config" not found."
+	echo "Make sure the config file exists and has this format:"
+	echo "calling_ae=<AET of this script>"
+	echo "dest_ae=<AET of the destination pacs>"
+	echo "dest_host=<IP of the destination pacs>"
+	echo "dest_port=<port of the detination pacs>"
+	echo "source_dir=<absolute path of the source studies>"
+	echo "timeout=<time to wait for cmove to complete before aborting>"
+	exit 1
+fi
 
-### END OF CONFIGURATION ###
+if [ -z $1 ]
+then
+	echo "ERROR: study not specified"
+	exit 1
+else
+	study=$1
+fi
+
 
 if [ -z $1 ]
 then
@@ -38,7 +52,7 @@ command="storescu -b $calling_ae -c $dest_ae@$dest_host:$dest_port $source_dir/$
 
 echo "INFO: About to execute $command"
 
-$command
+timeout $timeout $command
 status=$?
 
 if [ $status -ne 0 ]; then
