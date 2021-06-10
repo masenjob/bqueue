@@ -6,7 +6,7 @@
 # requires dcm4che 5
 #
 # 2020 Mauricio Asenjo
-# version 1.0
+# version 1.1
 
 set -u
 
@@ -33,7 +33,7 @@ else
 fi
 
 logfile=$dir"/"$(basename $0)".log"
-pidfile$dir"/"$(basename $0)".pid"
+pidfile=$dir"/"$(basename $0)".pid"
 
 if [ -f $pidfile ]
 then
