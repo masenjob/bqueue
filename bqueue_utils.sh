@@ -2,7 +2,7 @@
 # Utility functions for bqueue operations
 #
 # 2020 Mauricio Asenjo
-# version 2.1rc2
+# version 2.1rc3
 
 #logs the given string to the logfile with timestamp
 log ()
@@ -72,7 +72,7 @@ execute_job ()
                 msg="INFO: Executing job $job, attempt $try"
                 echo $msg
                 log $msg
-        $workscript $(cat $jobfile) 2>&1 > $jobfilelog
+        $workscript "$(cat $jobfile)" 2>&1 > $jobfilelog
         result=$?
         if [ $result -eq 0 ]
         then

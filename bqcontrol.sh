@@ -4,7 +4,7 @@
 # bqcontrol.sh list stopall startall
 # bqcontrol.sh start|stop config_file
 # 2021 Mauricio Asenjo
-# version 0.6
+# version 0.7
 
 
 if [ -z $1 ]; then
@@ -24,7 +24,7 @@ start_queue ()
 	if [ -f $1 ]; then
 		nohup ./bqueue.sh $queue &
 	else
-		exit 1
+		return 1
 	fi
 }
 
@@ -36,7 +36,7 @@ stop_queue ()
 	if [ -f $1 ]; then
 		kill $(cat $pidfile)
 	else
-		exit 1
+		return 1
 	fi
 }
 
