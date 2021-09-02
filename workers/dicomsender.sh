@@ -18,25 +18,25 @@ config=$dir"/"$(basename $0)".conf"
 
 if [ -f $config ]
 then
-	source $config
+        source $config
 else
-	echo "ERROR: Config file "$config" not found."
-	echo "Make sure the config file exists and has this format:"
-	echo "calling_ae=<AET of this script>"
-	echo "dest_ae=<AET of the destination pacs>"
-	echo "dest_host=<IP of the destination pacs>"
-	echo "dest_port=<port of the detination pacs>"
-	echo "source_dir=<absolute path of the source studies>"
-	echo "timeout=<time to wait for cmove to complete before aborting>"
-	exit 1
+        echo "ERROR: Config file "$config" not found."
+        echo "Make sure the config file exists and has this format:"
+        echo "calling_ae=<AET of this script>"
+        echo "dest_ae=<AET of the destination pacs>"
+        echo "dest_host=<IP of the destination pacs>"
+        echo "dest_port=<port of the detination pacs>"
+        echo "source_dir=<absolute path of the source studies>"
+        echo "timeout=<time to wait for cmove to complete before aborting>"
+        exit 1
 fi
 
 if [ -z $1 ]
 then
-	echo "ERROR: study not specified"
-	exit 1
+        echo "ERROR: study not specified"
+        exit 1
 else
-	study=$1
+        study=$1
 fi
 
 #Path to the storescu utility of dcm4che:
@@ -68,28 +68,28 @@ rsp_count=0
 timeout $timeout $command | tee >(cat - >&6) | grep C-STORE-RSP | \
 while read -r line
 do
-	$status=$(get-var "status=")
-	$rsp_count=$(( $rsp_count + 1 ))
-	if [ "$status" != "$DICOM_OK" ]
-		msg=$study" ERROR: status="$status
-		echo $msg
-		exit 1
-	fi
+        $status=$(get-var "status=")
+        $rsp_count=$(( $rsp_count + 1 ))
+        if [ "$status" != "$DICOM_OK" ] ; then
+                msg=$study" ERROR: status="$status
+                echo $msg
+                exit 1
+        fi
 done
 # Exit if last command was not succesful
 exit_status=$?
 if [ $exit_status -ne 0 ]
 then
-	echo "ERROR executing $storescu, aborting"
-	exit 2
+        echo "ERROR executing $storescu, aborting"
+        exit 2
 fi
 
 # Exit if we got 0 lines containing C-STORE-RSP
 if [ $rsp_count -eq 0 ]
 then
-	msg=$study" ERROR: 0 instances sent"
-	echo $msg
-	exit 3
+        msg=$study" ERROR: 0 instances sent"
+        echo $msg
+        exit 3
 fi
 
 echo "INFO: Deleting study $study after successful transfer"
