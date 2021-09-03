@@ -5,7 +5,7 @@
 # study can be specified by accession number or study uid
 # Requires dcm4che version 5
 # 2020 Mauricio Asenjo
-# version 1.3
+# version 1.4
 
 # Get the script directory
 dir=$(dirname ${BASH_SOURCE[0]})
@@ -21,8 +21,8 @@ else
 	echo "Make sure the config file exists and has this format:"
 	echo "calling_ae=<AET of this script>"
 	echo "source_ae=<AET of the source pacs>"
-	echo "source_ip=<ip of the soruce pacs>"
-	echo "source_port=<port of the soruce pacs"
+	echo "source_ip=<ip of the source pacs>"
+	echo "source_port=<port of the source pacs"
 	echo "dest_ae=<AET of the destination pacs>"
 	echo "query=<Query by (Accession number: ACC or Study UID: SUID)>"
 	echo "timeout=<time to wait for cmove to complete before aborting>"
@@ -56,10 +56,11 @@ get-var ()
 # returns the value next to the = sign
 # Example: if called with "status=", returns "OH"
 # by splitting the string by the " " or "," character (regexp [, ])
+# If several lines matches, return only de value of the last one
 
 {
 local variable=$1
-echo $result | awk -v var="$variable" 'BEGIN {FS="[";} // { split($2, arr, "[, ]"); for (i in arr) { if(index(arr[i],var)){ gsub(var,"",arr[i]); print arr[i];} } }'
+echo "$result" | grep $variable | tail -1 | awk -v var="$variable" 'BEGIN {FS="[";} // { split($2, arr, "[, ]"); for (i in arr) { if(index(arr[i],var)){ gsub(var,"",arr[i]); print arr[i];} } }'
 }
 
 ERROR=0
@@ -70,7 +71,7 @@ exec 6>&1
 command="$movescu -b $calling_ae -c $source_ae@$source_ip:$source_port $queryby$study --dest $dest_ae"
 echo "INFO: About to execute $command"
 
-result=$(timeout $timeout $command | tee >(cat - >&6) | grep -v remaining | grep C-MOVE-RSP)
+result="$(timeout $timeout $command | tee >(cat - >&6) | grep C-MOVE-RSP)"
 exit_status=$?
 
 if [ $exit_status -ne 0 ]
