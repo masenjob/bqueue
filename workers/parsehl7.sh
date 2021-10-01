@@ -3,7 +3,7 @@
 # and generate a job file containing the accession number
 # or study uid referenced in the message
 # 2021 Mauricio Asenjo
-# version 0.3
+# version 0.4
 
 
 # Get the script directory
@@ -18,7 +18,7 @@ IAN_FIELD="ORC 25"
 FILENAME="SUID"
 QUERYBY="SUID"
 SUID_LOCATION_FIELD="ZDS 1"
-
++
 if [ -f $config ]
 then
         source $config
@@ -60,10 +60,11 @@ then
 		SUID=$(get_hl7_field $SUID_LOCATION_FIELD "$HL7")
 		
 		# Set the job filename
+		suffix=$(date +%Y%m%d%H%M%s)
 		if [ "$FILENAME" = "ACC" ] ; then
-			job_file=$ACC".job"
+			job_file=$ACC"_"$suffix".job"
 		elif [ "$FILENAME" = "SUID" ] ; then
-			job_file=$SUID".job"
+			job_file=$SUID"_"$suffix".job"
 		else
 			echo "FILENAME option not recognized : $FILENAME"
 			exit 3
@@ -80,3 +81,4 @@ then
         #Create job file
         echo $query_data > $OUTDIR/$job_file
 fi
+
