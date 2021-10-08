@@ -11,7 +11,7 @@
 # Requires dcm4che version 5 in the path
 #
 # 2021 Mauricio Asenjo
-# version 2.4
+# version 2.5
 
 # Get the script directory
 dir=$(dirname ${BASH_SOURCE[0]})
@@ -159,12 +159,12 @@ if [ $verify -eq 1 ] ; then
 	seriesToSend="$(comm -23 <(echo "$diskSeries") <(echo "$pacsSeries") | grep "\S" )"
 else
 	# Transmit everything in source study
-	seriesToSend=$diskSeries
+	seriesToSend="$diskSeries"
 fi
 
 # Transmit series
 error=0
-if [ -z $seriesToSend ] ; then
+if [ -z "$seriesToSend" ] ; then
 	echo "WARNING: Nothing to send for study $study"
 else
 	tries=2
