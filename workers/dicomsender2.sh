@@ -11,7 +11,7 @@
 # Requires dcm4che version 5 in the path
 #
 # 2021 Mauricio Asenjo
-# version 2.5
+# version 2.6
 
 # Get the script directory
 dir=$(dirname ${BASH_SOURCE[0]})
@@ -191,7 +191,7 @@ else
 	done
 fi
 
-if [ "$error" -neq 0 ] ; then
+if [ ! "$error" -eq 0 ] ; then
 	exit $error
 fi
 
