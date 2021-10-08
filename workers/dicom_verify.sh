@@ -76,7 +76,7 @@ isdecimal() {
 
 # Get n° of studies in source Pacs:
 
-echo "About to execute: findscu -b $calling_ae -c $sourcePacsConnString $ssl_opts -m StudyInstanceUID=$study -r NumberOfStudyRelatedInstances | grep NumberOfStudyRelatedInstances | grep -v '\[\]' | awk -F'[\\[\\]]' '{print $2}'"
+echo "About to execute: findscu -b $calling_ae -c $sourcePacsConnString $source_ssl_opts -m StudyInstanceUID=$study -r NumberOfStudyRelatedInstances | grep NumberOfStudyRelatedInstances | grep -v '\[\]' | awk -F'[\\[\\]]' '{print $2}'"
 
 nInstancesOnSourcePacs=$(findscu -b $calling_ae -c $sourcePacsConnString $source_ssl_opts -m StudyInstanceUID=$study -r NumberOfStudyRelatedInstances | grep NumberOfStudyRelatedInstances | grep -v '\[\]' | awk -F'[\\[\\]]' '{print $2}')
 
@@ -89,7 +89,7 @@ fi
 
 # Get n° of studies in dest Pacs:
 
-echo "About to execute: findscu -b $calling_ae -c $destPacsConnString $ssl_opts -m StudyInstanceUID=$study -r NumberOfStudyRelatedInstances | grep NumberOfStudyRelatedInstances | grep -v '\[\]' | awk -F'[\\[\\]]' '{print $2}'"
+echo "About to execute: findscu -b $calling_ae -c $destPacsConnString $dest_ssl_opts -m StudyInstanceUID=$study -r NumberOfStudyRelatedInstances | grep NumberOfStudyRelatedInstances | grep -v '\[\]' | awk -F'[\\[\\]]' '{print $2}'"
 
 nInstancesOnDestPacs=$(findscu -b $calling_ae -c $destPacsConnString $dest_ssl_opts -m StudyInstanceUID=$study -r NumberOfStudyRelatedInstances | grep NumberOfStudyRelatedInstances | grep -v '\[\]' | awk -F'[\\[\\]]' '{print $2}')
 
