@@ -1,12 +1,12 @@
 #!/bin/bash
 #
-# dicom_verify_series.sh
-# verify that a study specified in
-# command line has all of it series in source pacs
-# present in destination pacs 
+# get_studies_by_date.sh
+# get a list of studies for the specified period
+# in source pcas specified in configuration
+# and generate job files for each one
 #
 # 2021 Mauricio Asenjo
-# version 0.1
+# version 0.8
 
 # Get the script directory
 dir=$(dirname ${BASH_SOURCE[0]})
@@ -14,12 +14,16 @@ dir=$(dirname ${BASH_SOURCE[0]})
 # Config file (relative to script location)
 config=$dir"/"$(basename $0)".conf"
 
+# Log file (relative to script location)
+logfile=$dir"/"$(basename $0)".log"
 
 # defaults
 source_ssl="FALSE"
-dest_ssl="FALSE"
 timeout="10m"
-tempdir="/tmp"
+jobfilename="ACC"
+study_id="SUID"
+unique=0
+tmpdir="/tmp"
 
 if [ -f $config ]
 then
@@ -35,88 +39,102 @@ else
 	echo "#source_ssl=<TRUE|FALSE>"
 	echo "#source_trustore=/root/certs/falpKeystore.pkcs12"
 	echo "#source_trustpass=4gf42w1n"
-	echo "#destination pacs options"
-	echo "dest_aet=<AET> # Destination pacs AETITLE"
-	echo "dest_host=<hostname_or_ip> # Destination pacs hostname or ip address"
-	echo "dest_port=<port> # Destination pacs AETITLE"
-	echo "# Optional destination ssl options"
-	echo "# dest_ssl=TRUE"
-	echo "# dest_trustore=/root/certs/falpKeystore.pkcs12"
-	echo "# dest_trustpass=4gf42w1n"
 	echo "calling_ae=<AET> # AET for query"
 	echo "timeout=<10m> # timeout in minutes"
-	echo "study_id=<ACC|SUID> # Study query parameter is Accession number ACC or StudyUID SUID"
-	echo "tempdir=<dir> # Directory to store temp files (default /tmp" 
+	echo "study_id=<ACC|SUID> # Study query parameter is AccessionNumber ACC or StudyUID SUID. Default is SUID"
+	echo "jobfilename=<ACC|SUID> # job filename is AccessionNumber ACC or StudyUID SUID. Default is ACC"
+	echo "jobdir=<dir> # Directory to store job files "
+	echo "unique=<0|1> # Whether filenames should have a unique suffix. Default is 0"
+	echo "tmpdir=<dir> # dir to store temp files. Default is /tmp "
+	exit 1
+fi
+
+xsl="get_studies_by_date.xsl"
+
+if [ ! -f $xsl ] ; then
+	echo "ERROR : $xsl not found"
+	echo "Make sure there is a $xsl file in current dir and has this contents:"
+	echo "<xsl:stylesheet version=\"1.0\" xmlns:xsl=\"http://www.w3.org/1999/XSL/Transform\">
+  <xsl:output method=\"text\"/>
+
+  <xsl:template match=\"/NativeDicomModel\">
+    <xsl:text>\"</xsl:text>
+    <xsl:apply-templates select=\"DicomAttribute[@tag='0020000D']\"/>
+    <xsl:text>\",\"</xsl:text>
+    <xsl:apply-templates select=\"DicomAttribute[@tag='00080050']\"/>
+    <xsl:text>\"
+</xsl:text>
+  </xsl:template>
+
+  <xsl:template match=\"DicomAttribute\">
+    <xsl:apply-templates select=\"Value\"/>
+  </xsl:template>
+
+</xsl:stylesheet>"
+	exit 2
 fi
 
 if [ -z $1 ]
 then
-        echo "ERROR: study not specified"
-        exit 1
+        echo "Date query not specified. Will query for studies since yesterday"
+        dateQuery=$(date --date=yesterday +%Y%m%d)"-"
 else
-        study=$1
+        dateQuery=$1
 fi
 
-if [ "$source_ssl" = "TRUE" ] ; then
-	source_ssl_opts="--trust-store $source_trustore  --trust-store-pass $source_trustpass --tls1 --tls-aes"
-fi
+#Get study list
+studyList="studies"
 
-if [ "$dest_ssl" = "TRUE" ] ; then
-	dest_ssl_opts="--trust-store $dest_trustore  --trust-store-pass $dest_trustpass --tls1 --tls-aes"
+#Generated study list will have a "1" appended to the name
+
+genStudyList=$studyList"1"
+
+# Create a new file
+
+if (truncate -s 0 $tmpdir/$genStudyList) ; then
+	echo "Generating new study list"
+else
+	echo "ERROR: file $tmpdir/$genStudyList cannot be created, aborting"
+	exit 1
 fi
 
 sourcePacsConnString=$source_aet@$source_host:$source_port
-destPacsConnString=$dest_aet@$dest_host:$dest_port
-sourceSeriesFile="$tempdir"/$study"_source_series.txt"
-destSeriesFile="$tempdir"/$study"_dest_series.txt"
 
-trap "command rm $sourceSeriesFile $destSeriesFile" EXIT
+echo "Querying studies for $dateQuery" ...
+findscu -b $calling_ae -c $sourcePacsConnString -m StudyDate=$dateQuery -r AccessionNumber -r StudyInstanceUID -r StudyDate -x $xsl --out-cat --out-dir $tmpdir --out-file $studyList > $logfile
 
-# Returns 0 if a value is an integer, 1 otherwise
-isdecimal() {
-  # filter octal/hex/ord()
-  num=$(printf '%s' "$1" | sed "s/^0*\([1-9]\)/\1/; s/'/^/")
-  test "$num" && printf '%f' "$num" >/dev/null 2>&1
-}
+# remove double quotes from studylist file
+sed -i 's/"//g' "$tmpdir/$genStudyList"
 
-# Get study series in source Pacs:
+studyCount=$(cat "$tmpdir/$genStudyList" | wc -l)
 
-echo "About to execute: findscu -b $calling_ae -c $sourcePacsConnString $source_ssl_opts -L SERIES -m StudyInstanceUID=$study -r SeriesInstanceUID | grep 0020,000E | awk -F'[\\[\\]]' '{print $2}' | grep "\S" | sort -u  "
+echo "Generating  $studyCount job files .."
 
-findscu -b $calling_ae -c $sourcePacsConnString $source_ssl_opts -L SERIES -m StudyInstanceUID=$study -r SeriesInstanceUID | grep 0020,000E | awk -F'[\\[\\]]' '{print $2}' | grep "\S" | sort -u >$sourceSeriesFile
-
-nSeriesOnSourcePacs=$(cat $sourceSeriesFile | wc -l || echo 0)
-
-if [ "$nSeriesOnSourcePacs" -gt 0 ] ; then
-	echo "INFO: Number of series on $source_host : $nSeriesOnSourcePacs"
-else
-	echo "ERROR: Problem getting series list on $source_host"
-	exit 2
-fi
-
-# Get study serires in dest Pacs:
-
-echo "About to execute: findscu -b $calling_ae -c $destPacsConnString $dest_ssl_opts -L SERIES -m StudyInstanceUID=$study -r SeriesInstanceUID |  grep 0020,000E | awk -F'[\\[\\]]' '{print $2}' | grep "\S" | sort -u"
-
-findscu -b $calling_ae -c $destPacsConnString $dest_ssl_opts -L SERIES -m StudyInstanceUID=$study -r SeriesInstanceUID |  grep 0020,000E | awk -F'[\\[\\]]' '{print $2}' | grep "\S" | sort -u >$destSeriesFile
-
-nSeriesOnDestPacs=$(cat $destSeriesFile | wc -l  || echo 0)
-
-if [ "$nSeriesOnDestPacs" -gt 0 ] ; then
-	echo "INFO: Number of series on $source_host : $nSeriesOnDestPacs"
-else
-	echo "ERROR: Problem getting series list on $source_host ,or number of series is 0"
-	exit 3
-fi
-
-#compare source series with dest series
-
-seriesDiff=$(comm -23 $sourceSeriesFile $destSeriesFile | grep "\S" )
-
-if [ -z "$seriesDiff" ]; then
-	echo "INFO: VERIFY  $study instances on $source_host ok"
-	exit 0
-else
-	echo "ERROR: VERIFY $study instances on $source_host missing in $dest_host : $seriesDiff"
-fi
-
+while read -r line
+do
+	studyUID=$(echo $line | awk -F "," '{ print $1 }')
+	acc=$(echo $line | awk -F "," '{ print $2 }')
+	# Create job file:
+	if [ "$unique" -eq 0 ]; then
+		suffix=""
+	else
+		suffix="_"$(date +%Y%m%d%H%M%s)
+	fi
+	if [ "$jobfilename" = "ACC" ]; then
+		jobfile=$acc$suffix".job"
+	else
+		jobfile=$studyUID$suffix".job"
+	fi
+	
+	#Replace spaces from the filename
+	jobfile=$(echo "$jobfile" | sed 's/ /_/g')
+	
+	if [ "$study_id" = "SUID" ]; then
+		contents="$studyUID"
+	else
+		contents="$acc"
+	fi
+	
+	echo "$contents" > "$jobdir/$jobfile"
+done < "$tmpdir/$genStudyList"
+echo "Done"
