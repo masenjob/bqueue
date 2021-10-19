@@ -6,7 +6,7 @@
 # and generate job files for each one
 #
 # 2021 Mauricio Asenjo
-# version 0.8
+# version 0.9
 
 # Get the script directory
 dir=$(dirname ${BASH_SOURCE[0]})
@@ -16,6 +16,8 @@ config=$dir"/"$(basename $0)".conf"
 
 # Log file (relative to script location)
 logfile=$dir"/"$(basename $0)".log"
+
+xsl=$dirname/get_studies_by_date.xsl
 
 # defaults
 source_ssl="FALSE"
@@ -49,7 +51,7 @@ else
 	exit 1
 fi
 
-xsl="get_studies_by_date.xsl"
+
 
 if [ ! -f $xsl ] ; then
 	echo "ERROR : $xsl not found"
