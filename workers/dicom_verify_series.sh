@@ -6,7 +6,7 @@
 # present in destination pacs 
 #
 # 2021 Mauricio Asenjo
-# version 0.1
+# version 0.2
 
 # Get the script directory
 dir=$(dirname ${BASH_SOURCE[0]})
@@ -118,5 +118,6 @@ if [ -z "$seriesDiff" ]; then
 	exit 0
 else
 	echo "ERROR: VERIFY $study instances on $source_host missing in $dest_host : $seriesDiff"
+	exit 4
 fi
 
