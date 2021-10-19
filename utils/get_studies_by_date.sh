@@ -6,7 +6,7 @@
 # and generate job files for each one
 #
 # 2021 Mauricio Asenjo
-# version 0.5
+# version 0.8
 
 # Get the script directory
 dir=$(dirname ${BASH_SOURCE[0]})
@@ -49,7 +49,7 @@ else
 	exit 1
 fi
 
-xsl="dicom_ver_source_dest.xsl"
+xsl="get_studies_by_date.xsl"
 
 if [ ! -f $xsl ] ; then
 	echo "ERROR : $xsl not found"
@@ -85,18 +85,28 @@ fi
 #Get study list
 studyList="studies"
 
+#Generated study list will have a "1" appended to the name
+
+genStudyList=$studyList"1"
+
+# Create a new file
+
+if (truncate -s 0 $tmpdir/$genStudyList) ; then
+	echo "Generating new study list"
+else
+	echo "ERROR: file $tmpdir/$genStudyList cannot be created, aborting"
+	exit 1
+fi
+
 sourcePacsConnString=$source_aet@$source_host:$source_port
 
 echo "Querying studies for $dateQuery" ...
 findscu -b $calling_ae -c $sourcePacsConnString -m StudyDate=$dateQuery -r AccessionNumber -r StudyInstanceUID -r StudyDate -x $xsl --out-cat --out-dir $tmpdir --out-file $studyList > $logfile
 
-# dcm4che appends a "1" to the --out-file filename (before the dot, if there is one , so we have to do the same
-studyList=$studyList"1"
-
 # remove double quotes from studylist file
-sed -i 's/"//g' "$tmpdir/$studyList"
+sed -i 's/"//g' "$tmpdir/$genStudyList"
 
-studyCount=$(cat "$tmpdir/$studyList" | wc -l)
+studyCount=$(cat "$tmpdir/$genStudyList" | wc -l)
 
 echo "Generating  $studyCount job files .."
 
@@ -126,5 +136,5 @@ do
 	fi
 	
 	echo "$contents" > "$jobdir/$jobfile"
-done < "$tmpdir/$studyList"
+done < "$tmpdir/$genStudyList"
 echo "Done"
