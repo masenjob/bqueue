@@ -6,7 +6,7 @@
 # requires dcm4che 5
 #
 # 2021 Mauricio Asenjo
-# version 2
+# version 3
 
 # Get the script directory
 dir=$(dirname ${BASH_SOURCE[0]})
@@ -39,66 +39,72 @@ action=$1
  # Start storescp
 start_dicomserver ()
 {
-        #reset logfile
-        echo "" > $logfile
-        echo "STARTING $0"
-        nohup storescp -b $AET:$port --directory $recv_dir --filepath $dir_format >> $logfile & PID=$!
-        local status=$?
-        echo $PID > $pidfile
-        echo "$0 STARTED"
-        return $status
+
+		if ( is_running ) ; then
+			echo " dicomserver is already running on pid $(is_running)"
+			return 1
+		else
+			echo "STARTING $0"
+			nohup storescp -b $AET:$port --directory $recv_dir --filepath $dir_format > $logfile &
+			local status=$?
+			if [ ! "$status" -eq 0 ] ; then
+				echo "Could not start $0 , see $logfile for details"
+				return 2
+			else
+				echo "$0 STARTED"
+				return $status
+			fi
+		fi
 }
 
-#stop the storescp pid in $pidfile
+
 stop_dicomserver ()
 {
-if [ -f $pidfile ]; then
-        local PID=$(cat $pidfile)
-        if [ "$(ps ax | grep storescp | grep $AET":"$port | awk '{print $1}')"  -eq "$PID" ] ; then
-                kill $PID
-                local status=$?
-                if [ $status = 0 ] ; then
-                        echo "$0 STOPPED"
-                        rm $pidfile
-                else
-                        echo "0 cannot be stopped. Consider running kill -9 $PID and remove $pidfile"
-                fi
-        else
-                # pidfile found, but no process running
-                echo "No process found. Consider removing $pidfile"
-                local status=2
-        fi
-else
-        # no pid found , stopped
-        echo "$0 NOT RUNNING"
-        local status=0
-fi
-return $status
+	if ( is_running ); then
+		kill $(is_running)
+		local status=$?
+		if [ $status = 0 ] ; then
+			echo "$0 STOPPED"
+		else
+			echo "Error stopping $0 in pid $(is_running)"
+		fi
+	else
+        echo "$0 not running"
+        local status=2
+    fi
+	return $status
 }
 
 status_dicomserver ()
 {
-        if [ -f $pidfile ]; then
-                if [ "$(ps ax | grep storescp | grep $AET":"$port | awk '{print $1}')"  -eq "$(cat $pidfile)" ] ; then
-                        # pidfile found and match a storescp process
-                        echo "RUNNING"
-                else
-                        # pidfile found, but no process runing
-                        echo "NOT_RUNNING"
-                fi
-        else
-                echo "STOPPED"
-        fi
+	# Prints the status of the dicomserver service
+    if ( is_running ); then
+        echo "$0 Running on pid $(is_running)"
+    else
+        echo "$0 is not running"
+    fi
+}
+
+is_running ()
+{
+	# Prints the value of the pid of the storescp process , or -1 if not found
+	local pid=$(ps ax | grep storescp | grep $AET":"$port | awk '{print $1}')
+	if [ -z $pid ]; then
+		echo -1
+		return 1
+	else
+		echo $pid
+		return 0
+	fi
 }
 
 logfile=$dir"/"$(basename $0)".log"
-pidfile=$dir"/"$(basename $0)".pid"
 
 
 case $action in
 
         status)
-                echo "service status: $(status_dicomserver) "
+                status_dicomserver
                 ;;
 
         start)
