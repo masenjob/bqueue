@@ -20,6 +20,8 @@ config=$dir"/"$(basename $0)".conf"
 # defaults
 ssl="FALSE"
 timeout="10m"
+verify=0
+delete=1
 
 if [ -f $config ]
 then
@@ -36,6 +38,8 @@ else
 		echo "ssl=<TRUE/FALSE> # Use ssl (default FALSE)"
 		echo "trustore=<path> # Full path of the trustore file"
 		echo "trustpass=<password> #Password of the keystore file"
+		echo "verify=<1|0> # query the pacs for n° of instances and verify if it matches what was received"
+		echo "delete=<1|0> # delete study after successful transfer"
         exit 1
 fi
 
@@ -50,9 +54,8 @@ fi
 if [ "$ssl" = "TRUE" ] ; then
 	ssl_opts="--trust-store $trustore  --trust-store-pass $trustpass --tls1 --tls-aes"
 fi
-#Path to the storescu utility of dcm4che:
-storescu=storescu
 
+pacsConnString=$dest_ae@$dest_host:$dest_port
 DICOM_OK="0H"
 DICOM_CONT="ff00H"
 
@@ -95,14 +98,29 @@ done <<< $(timeout $timeout $command | tee >(cat - >&6) | grep C-STORE-RSP )
 # Declare error if we got 0 lines containing C-STORE-RSP
 if [ "$rsp_count" -eq 0 ]
 then
-        msg=$study" ERROR: $rsp_count instances sent"
-        echo $msg
-        error=3
+        echo $study" ERROR: $rsp_count instances sent"
+        exit 3
+fi
+if [ $verify -eq 1 ] ; then
+	nInstancesOnDisk=$(find $source_dir/$study -type f | wc -l)
+	# delay verification to allow Pacs to register objects
+	sleep 60 
+	queryCommand="findscu -b $calling_ae -c $pacsConnString $ssl_opts -m StudyInstanceUID=$study -r NumberOfStudyRelatedInstances | grep NumberOfStudyRelatedInstances | grep -v '\[\]' | awk -F'[\\[\\]]' '{print $2}'"
+	echo "About to execute: $queryCommand"
+	nInstancesOnPacs=$(findscu -b $calling_ae -c $pacsConnString $ssl_opts -m StudyInstanceUID=$study -r NumberOfStudyRelatedInstances | grep NumberOfStudyRelatedInstances | grep -v '\[\]' | awk -F'[\\[\\]]' '{print $2}')
+	echo "Number of instance on disk : $nInstancesOnDisk"
+	echo "Number of instances on $dest_host : $nInstancesOnPacs"
+	if [ $nInstancesOnDisk -gt $nInstancesOnPacs ]; then
+		echo "ERROR: N° of instances in Pacs is less than what we sent"
+		exit 4
+	fi
 fi
 
 if [ "$error" -eq 0 ]; then
-	echo "INFO: Deleting study $study after successful transfer"
-	rm -rf $source_dir/$study
+	if [ $delete -eq 1 ] ; then
+		echo "INFO: Deleting study $study after successful transfer"
+		rm -rf $source_dir/$study
+	fi
 else
 	echo " ERROR $error"
 	exit $error
