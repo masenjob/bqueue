@@ -141,7 +141,6 @@ echo $status
 queue_status ()
 {
 local status="stopped"
-local queue=$1
 if [ -f $PID_file ]; then
         if ps -p $(cat $PID_file)>/dev/null; then
                 status="running"
