@@ -35,7 +35,7 @@ do
 		source $i
 		source ./bqueue_defs.sh
 		tput cup $line 0
-		printf "$format" $name $(queue_status $name) $(job_count $in) $(job_count $deliver)/$batch $(job_count $process)/$threads $(job_count $finished) $(job_count $failed)
+		printf "$format" $name $(queue_status) $(job_count $in) $(job_count $deliver)/$batch $(job_count $process)/$threads $(job_count $finished) $(job_count $failed)
 		line=$(($line + 1))
 	done
 	sleep 5
