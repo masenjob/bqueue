@@ -1,19 +1,38 @@
 #!/bin/bash
-set -u
+# rsync a specified subpath
+# between $SOURCE and $DEST directories
+# 2022 Mauricio Asenjo
+# version 0.3
 
-#Archive source dir:
-source=/centera/archive
+# Get the script directory
+dir=$(dirname ${BASH_SOURCE[0]})
 
-#Archive destination dir:
-dest=/unitynas/archive
+# Config file (relative to script location)
+config=$dir"/"$(basename $0)".conf"
+
+# defaults
+delay=1
+
+if [ -f $config ]
+then
+        source $config
+else
+	echo "config file not found"
+	echo "Make sure there is a $config file and has this contents:"
+	echo "SOURCE= #source directory"
+	echo "DEST= #destination directory"
+fi
 
 if [ -z $1 ]
 then
-        echo "USAGE: $0 <archive_dir>"
+        echo "ERROR: sub-path not specified"
         exit 1
 fi
 
-dir=$1
+DIR=$1
 
-# echo "INFO: About to execute rsync -av $source/$dir $dest/"
-rsync -av $source/$dir $dest/ 2>&1 | (cat - )
+# Create destination directory if required:
+mkdir -p $DEST/$DIR/
+
+echo "INFO: About to execute rsync -avi --checksum --dry-run $SOURCE/$DIR/ $DEST/$DIR/  2>&1 | (cat - )"
+rsync -rvi --checksum $SOURCE/$DIR/ $DEST/$DIR/  2>&1 | (cat - )
