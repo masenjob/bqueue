@@ -2,12 +2,12 @@
 #
 # gen_jobs.sh
 #
-# Generates job files using the specified text fiel as input
+# Generates job files using the specified text file as input
 # and populates with them the "in" directory of the queue 
 # specified by its config file
 #
-# 2020 Mauricio Asenjo
-# version 1.2
+# 2022 Mauricio Asenjo
+# version 1.3
 
 unique=0
 while getopts c:i:u option
@@ -50,7 +50,7 @@ count=0
 while read -r line
 do
 	if [ "$unique" -eq 1 ] ; then
-		echo $line > $name/"in"/$(date +%d%m%Y%M%S%N)".job"
+		echo $line > $name/"in"/$(date +%d%m%Y%M%S)"-"$count".job"
 	else
 		echo $line > $name/"in"/$line".job"
 	fi
