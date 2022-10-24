@@ -2,7 +2,7 @@
 # Utility functions for bqueue operations
 #
 # 2022 Mauricio Asenjo
-# version 2.2
+# version 2.3
 
 #logs the given string to the logfile with timestamp
 log ()
@@ -23,8 +23,9 @@ job_count ()
 deliver_jobs ()
 {
     IFS=$'\n'
-    for file in $(find $in -maxdepth 1 -type f -name '*.job'  -exec basename {} \; | head -$batch)
+    for i in $(find $in -maxdepth 1 -type f -name '*.job' | head -$batch)
     do
+		file=$(basename $i)
         msg="INFO: moving "$file" job to "$deliver
                 echo $msg
                 log $msg
@@ -38,8 +39,9 @@ process_job ()
 {
     local num_jobs=$1
     IFS=$'\n'
-    for file in $(find $deliver -maxdepth 1 -type f -name '*.job'  -exec basename {} \; | head -$num_jobs)
+    for i in $(find $deliver -maxdepth 1 -type f -name '*.job' | head -$num_jobs)
     do
+		file=$(basename $i)
         msg="INFO: moving "$file" job to "$process
                 echo $msg
                 log $msg
