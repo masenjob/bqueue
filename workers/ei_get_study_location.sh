@@ -2,7 +2,7 @@
 #
 # Executes a call to EI restfull API
 # GET v1/study/getStudyLocation
-# Returns the full and partial locations for a study given
+# Returns the the json with full and partial locations for a study given
 # either a study UID or an accession number as the identifier
 
 # 2022 Mauricio Asenjo
@@ -72,4 +72,4 @@ done
 curl -k -s -f -X $req_type \
 --header 'Accept: application/json' \
 --header "Authorization: Bearer $token" \
-$request_uri | jq .
+$request_uri
